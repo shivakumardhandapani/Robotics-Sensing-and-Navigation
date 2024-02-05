@@ -1,2 +1,0 @@
-gps_driver
--DCATKIN_DEVEL_PREFIX=/home/shivakumardhandapani/gnss/devel -DCMAKE_INSTALL_PREFIX=/home/shivakumardhandapani/gnss/install -G Unix Makefiles
