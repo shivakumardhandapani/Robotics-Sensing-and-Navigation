@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import rospy
+import sys
 import serial
 import utm
 from gps_driver.msg import Customgps
@@ -43,22 +44,31 @@ def convertToUTM(LatitudeSigned, LongitudeSigned):
     return [UTM_Easting, UTM_Northing, UTM_Zone, UTM_Letter]
 
 def UTCtoUTCEpoch(UTC):
-   
-        UTC = float(UTC)
+    UTC = float(UTC)
 
-        UTCinSecs = (UTC // 10000) * 3600 + ((UTC % 10000) // 100) * 60 + (UTC % 100)
-        Current_Time = datetime.utcnow()
-        Current_UTC_Time = datetime.utcnow()
-        Midnight_UTC = datetime.combine(Current_UTC_Time, datetime.min.time(), tzinfo=timezone.utc)    
-        TimeSinceEpochBOD = Midnight_UTC.timestamp()
-        Current_Time_Sec = (Current_Time)
-        Current_Time_Nsec = ((Current_Time - Current_Time_Sec) * 1e9)
-        return [Current_Time_Sec, Current_Time_Nsec]
+    UTCinSecs = (int(UTC // 10000) * 3600 + int((UTC % 10000) // 100) * 60 + (UTC % 100))
+    # Current_UTC_Time = datetime.utcnow()
+    # Midnight_UTC = datetime.combine(Current_UTC_Time, datetime.min.time(), tzinfo=timezone.utc)    
+    TimeSinceEpoch = time.time()
+    TimeSinceEpochBOD = TimeSinceEpoch - (TimeSinceEpoch % 86400)
+    Current_Time = TimeSinceEpochBOD + UTCinSecs
+    Current_Time_Sec = int(Current_Time)
+    Current_Time_Nsec = int(str(UTC)[6:9]) * 1e7
+    return [Current_Time_Sec, Current_Time_Nsec]
 
 if __name__ == '__main__':
     rospy.init_node('gps_driver')
-    serialPortAddr = rospy.get_param('~port', '/dev/ttyUSB0')
-    serialPort = serial.Serial(serialPortAddr, 4800)
+
+    args = rospy.myargv(argv=sys.argv)
+    if len(args) < 2:
+        print("Usage: standalone_driver.py <port>")
+        sys.exit(1)
+      
+    port_param = args[1]
+    
+    serialPort = serial.Serial(port_param, 4800)
+    #serialPortAddr = rospy.get_param('~port', '/dev/pts/3')
+    #serialPort = serial.Serial(serialPortAddr, 4800)
     pub =rospy.Publisher('gps',Customgps,queue_size=1) 
     bag = rosbag.Bag('output.bag', 'w')
     try:
@@ -88,14 +98,14 @@ if __name__ == '__main__':
                 print(f'Latitude: {LatitudeSigned}')
                 print(f'Longitude: {LongitudeSigned}')
                 UTM_Vals = convertToUTM(LatitudeSigned, LongitudeSigned)    
-                Current_Time = UTCtoUTCEpoch(UTC)
-                print(f'CurrentTime: {Current_Time}')                
+                Current_Time_Sec, Current_Time_NSec = UTCtoUTCEpoch(UTC)
+                # print(f'CurrentTime: {Current_Time}')                
                 rospy.loginfo('publishing latitude,longitude,UTM data')
                 cgps_msg = Customgps()
                 cgps_msg.header.frame_id = 'GPS1_Frame'
-                cgps_msg.header.stamp = rospy.Time(int(time.time()), int((time.time() % 1) * 1e9))
-                cgps_msg.latitude = Latitude
-                cgps_msg.longitude = Longitude
+                cgps_msg.header.stamp = rospy.Time(Current_Time_Sec,Current_Time_NSec)
+                cgps_msg.latitude = float(LatitudeSigned)
+                cgps_msg.longitude = float(LongitudeSigned)
                 cgps_msg.altitude = Altitude
                 # UTMVals = utm.from_latlon((LatitudeSigned),(LongitudeSigned))
                 cgps_msg.utm_easting = UTM_Vals[0]
@@ -104,7 +114,7 @@ if __name__ == '__main__':
                 cgps_msg.letter = UTM_Vals[3]
                 cgps_msg.hdop = HDOP
                 cgps_msg.gpgga_read=gpgga_Read
-                cgps_msg.header.stamp = rospy.Time.now()
+                #cgps_msg.header.stamp = rospy.Time.now()
                 pub.publish(cgps_msg)
                 bag.write('gps',cgps_msg)
 
