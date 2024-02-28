@@ -1,8 +1,4 @@
 <launch>
-	<arg name="port" default="/dev/pts/1"/>
-	<arg name="baud" default="4800"/>
-	<arg name="sample" default="5.0"/>
-	<node name="rtk_driver" pkg="gps_driver"
-type="rtk_driver.py" args="$(arg port)" output="screen">
-	</node>
+    <arg name="port"/>
+    <node name="gps_driver" pkg="gps_driver" type="standalone_driver.py" output="screen" args="$(arg port)"/>
 </launch>
