@@ -20,11 +20,11 @@ def load_data(address, get_topic):
 	data = pd.read_csv(data)
 	return data
 
-def calibration_value_mag(data):
+def calibration_value_magn(data):
 	# get best fit ellipse
-	magxmean, magymean = data[0].mean(), data[1].mean()
-	data[0] -= magxmean
-	data[1] -= magymean
+	magnxmean, magnymean = data[0].mean(), data[1].mean()
+	data[0] -= magnxmean
+	data[1] -= magnymean
 	U, S, V = np.linalg.svd(np.stack((data[0], data[1])))
 	N = len(data[0])
 	tt = np.linspace(0, 2*np.pi, N)
@@ -39,12 +39,12 @@ def calibration_value_mag(data):
 	a = math.sqrt(fit[1,a_index]**2 + fit[0,a_index]**2)
 	b = math.sqrt(fit[1,b_index]**2 + fit[0,b_index]**2)
 
-	data[0] += magxmean
-	data[1] += magymean
+	data[0] += magnxmean
+	data[1] += magnymean
 
-	return magxmean, magymean, theta, a, b
+	return magnxmean, magnymean, theta, a, b
 
-def calibrate_mag(data, cx, cy, theta, a, b):
+def calibrate_magn(data, cx, cy, theta, a, b):
 	#translate
 	out_data = [data[0],data[1]]
 	out_data[0] = data[0] - cx
@@ -109,7 +109,7 @@ def find_stationary2(data,stat_time,data_freq):
 			stat_period.append(i-1)
 	return stat_period
 
-def remove_noise(noisy_data, stat_periods):
+def denoise(noisy_data, stat_periods):
 	N=len(stat_periods)
 	data=np.ones(len(noisy_data))
 	for i in range(1,N):
@@ -126,8 +126,7 @@ def remove_noise(noisy_data, stat_periods):
 			data[j] = noisy_data[j]- 1*mean_noise
 	return data
 
-
-def gps_vel_and_disp(gps_data):
+def gps_velocity_displacement(gps_data):
 	length = len(gps_data)
 	vel = np.ones(length)
 	dis = np.zeros(length)
@@ -149,11 +148,11 @@ def hard_correction(data,start,end,bias):
 	data[start*freq_imu:end*freq_imu] += bias
 	return data
 
-def points(data, avg, freq):
+def points(data, average, freq):
 	length = len(data)
 	t0 = 1/freq
 	i = int(length//2)
-	f = int(i + avg*3*freq)
+	f = int(i + average*3*freq)
 	period = [0]
 	slope = np.ones(30)
 
@@ -166,10 +165,10 @@ def points(data, avg, freq):
 
 	return period
 
-def correct_acceleration(data):
+def correct_accel(data):
 	data = data-np.mean(data)
 	period = find_stationary(data,2,freq_imu)
-	data = remove_noise(data,period)
+	data = denoise(data,period)
 	return data, period
 
 def gravity_vector(yaw,pitch,roll):
@@ -178,7 +177,7 @@ def gravity_vector(yaw,pitch,roll):
 	grav_vect = [[0],[0],[-9.8]]
 	return np.matmul(rot_mat,grav_vect)
 
-def correct_for_pitch(data,t0,t1):
+def pitch_correction(data,t0,t1):
 	t0 *= freq_imu
 	t1 *= freq_imu
 	pitch = np.mean(imu_data['IMU.pitch'][t0:t1])
@@ -188,25 +187,25 @@ def correct_for_pitch(data,t0,t1):
 	return grav[0]
 
 # Load circles data
-calb_address = '/home/shivakumardhandapani/lab5/src/data/data_going_in_circles.bag'
-imu_data = load_data(calb_address, '/imu')
-mag_x= imu_data['MagField.magnetic_field.x']
-mag_y= imu_data['MagField.magnetic_field.y']
+calib_address = '/home/shivakumardhandapani/lab5/src/data/data_going_in_circles.bag'
+imu_data = load_data(calib_address, '/imu')
+magn_x= imu_data['magField.magnetic_field.x']
+magn_y= imu_data['magField.magnetic_field.y']
 
-mag_periods = points(mag_x,20,freq_imu)
-mag_data = [mag_x[mag_periods[4]:mag_periods[6]],mag_y[mag_periods[4]:mag_periods[6]]]
+magn_periods = points(magn_x,20,freq_imu)
+magn_data = [magn_x[magn_periods[4]:magn_periods[6]],magn_y[magn_periods[4]:magn_periods[6]]]
 
 #get calibration values
-center_x, center_y, rot_angle, major_ax, minor_ax =calibration_value_mag(mag_data)
+center_x, center_y, rot_angle, major_ax, minor_ax =calibration_value_magn(magn_data)
 
 #calibrate magnetometer
-calb_mag_data = calibrate_mag(mag_data,center_x,center_y,rot_angle,major_ax,minor_ax)
-plt.scatter(calb_mag_data[0],calb_mag_data[1], color='pink')
-plt.scatter(mag_data[0],mag_data[1], color='grey')
-plt.legend(['Magnetometer calibrated','Magnetometer uncalibrated'])
-plt.title('Magnetometer Calibration')
-plt.xlabel('Magnetic_field X (Gauss)')
-plt.ylabel('Magnetic_field Y (Gauss)')
+calib_magn_data = calibrate_magn(magn_data,center_x,center_y,rot_angle,major_ax,minor_ax)
+plt.scatter(calib_magn_data[0],calib_magn_data[1], color='pink')
+plt.scatter(magn_data[0],magn_data[1], color='grey')
+plt.legend(['magnetometer calibrated','magnetometer uncalibrated'])
+plt.title('magnetometer Calibration')
+plt.xlabel('magnetic_field X (Gauss)')
+plt.ylabel('magnetic_field Y (Gauss)')
 plt.axis('equal')
 plt.grid(True)
 plt.show()
@@ -232,9 +231,9 @@ for i in range(samples_imu):
 imu_data['IMU.pitch']=imu_data['IMU.pitch'] - np.mean(imu_data['IMU.pitch'][0:50])
 imu_data['IMU.roll']=imu_data['IMU.roll'] - np.mean(imu_data['IMU.roll'][0:50])
 
-#get mag data and calibrate for soft iron and hard iron bias
-mag_data = [imu_data['MagField.magnetic_field.x'], imu_data['MagField.magnetic_field.y']]
-calb_mag_data = calibrate_mag(mag_data,center_x,center_y,rot_angle,major_ax,minor_ax)
+#get magn data and calibrate for soft iron and hard iron bias
+magn_data = [imu_data['magField.magnetic_field.x'], imu_data['magField.magnetic_field.y']]
+calib_magn_data = calibrate_magn(magn_data,center_x,center_y,rot_angle,major_ax,minor_ax)
 
 #yaw from IMU
 imu_data['IMU.yaw'] = np.unwrap(imu_data['IMU.yaw'])
@@ -243,33 +242,33 @@ imu_data['IMU.yaw'] = np.unwrap(imu_data['IMU.yaw'])
 imu_data['IMU.yaw'] = imu_data['IMU.yaw']-np.mean(imu_data['IMU.yaw'][0:20])
 
 #yaw from magnetometer
-mag_yaw = np.ones(samples_imu)
-mag_yaw_uncalb = np.ones(samples_imu)
+magn_yaw = np.ones(samples_imu)
+magn_yaw_uncalib = np.ones(samples_imu)
 for i in range(samples_imu):
-	mag_yaw_uncalb[i] = -math.degrees(math.atan2(mag_data[1][i],mag_data[0][i]))
-	mag_yaw [i] = -math.degrees(math.atan2(calb_mag_data[1][i],calb_mag_data[0][i]))
+	magn_yaw_uncalib[i] = -math.degrees(math.atan2(magn_data[1][i],magn_data[0][i]))
+	magn_yaw [i] = -math.degrees(math.atan2(calib_magn_data[1][i],calib_magn_data[0][i]))
 
-avg_size = 50
+average_size = 50
 corr_start = 19000
 corr_end = 26500
-mag_yaw[corr_start:corr_end-avg_size+1] = average(mag_yaw[corr_start:corr_end],avg_size)
-mag_yaw_uncalb[corr_start:corr_end-avg_size+1] = average(mag_yaw_uncalb[corr_start:corr_end],avg_size)
-mag_yaw[20160:21400] = average(mag_yaw[24760:26049],avg_size)
-mag_yaw_uncalb[20160:21400] = average(mag_yaw_uncalb[24760:26049],avg_size)
-avg_size = 100
-mag_yaw[corr_start:corr_end-avg_size+1] = average(mag_yaw[corr_start:corr_end],avg_size)
-mag_yaw_uncalb[corr_start:corr_end-avg_size+1] = average(mag_yaw_uncalb[corr_start:corr_end],avg_size)
+magn_yaw[corr_start:corr_end-average_size+1] = average(magn_yaw[corr_start:corr_end],average_size)
+magn_yaw_uncalib[corr_start:corr_end-average_size+1] = average(magn_yaw_uncalib[corr_start:corr_end],average_size)
+magn_yaw[20160:21400] = average(magn_yaw[24760:26049],average_size)
+magn_yaw_uncalib[20160:21400] = average(magn_yaw_uncalib[24760:26049],average_size)
+average_size = 100
+magn_yaw[corr_start:corr_end-average_size+1] = average(magn_yaw[corr_start:corr_end],average_size)
+magn_yaw_uncalib[corr_start:corr_end-average_size+1] = average(magn_yaw_uncalib[corr_start:corr_end],average_size)
 
 	#unwrap data
-mag_yaw = np.unwrap(mag_yaw,period=360)
-mag_yaw_uncalb = np.unwrap(mag_yaw_uncalb, period=360)
-mag_yaw = mag_yaw - np.mean(mag_yaw[0:40])
+magn_yaw = np.unwrap(magn_yaw,period=360)
+magn_yaw_uncalib = np.unwrap(magn_yaw_uncalib, period=360)
+magn_yaw = magn_yaw - np.mean(magn_yaw[0:40])
 
 imu_time = range(samples_imu)
-plt.plot(imu_time, mag_yaw, color='pink')
-plt.plot(imu_time, mag_yaw_uncalb, color='grey')
+plt.plot(imu_time, magn_yaw, color='pink')
+plt.plot(imu_time, magn_yaw_uncalib, color='grey')
 plt.title('Variation in magnetic yaw over time')
-plt.legend(['Mag yaw calibrated','Mag yaw uncalibrated'])
+plt.legend(['magn yaw calibrated','magn yaw uncalibrated'])
 plt.xlabel('Time (sec)')
 plt.ylabel('Orientation (deg)')
 plt.grid(True)
@@ -289,14 +288,14 @@ plt.ylabel('Orientation (deg)')
 plt.show()
 
 # Filters
-mag_yaw_filtered = butterworth_filter(mag_yaw, freq_imu, 0.1, 'low')
+magn_yaw_filtered = butterworth_filter(magn_yaw, freq_imu, 0.1, 'low')
 gyro_yaw_filtered = butterworth_filter(gyro_yaw, freq_imu, 0.000001, 'high')
 alpha = 0.2
-comp_yaw = alpha*mag_yaw_filtered + (1-alpha)*gyro_yaw_filtered
+comp_yaw = alpha*magn_yaw_filtered + (1-alpha)*gyro_yaw_filtered
 
 fig, axs = plt.subplots(2, 2, figsize=(15, 10), sharex=True)
-axs[0, 0].plot(imu_time, mag_yaw_filtered, color='pink')
-axs[0, 0].set_title('Low Pass Filtered Magnetometer Yaw')
+axs[0, 0].plot(imu_time, magn_yaw_filtered, color='pink')
+axs[0, 0].set_title('Low Pass Filtered magnetometer Yaw')
 axs[0, 0].set_xlabel('Time (sec)')
 axs[0, 0].set_ylabel('Orientation (deg)')
 axs[0, 1].plot(imu_time, gyro_yaw_filtered, color='grey')
@@ -323,20 +322,20 @@ gps_data['UTM_easting'] = gps_data['UTM_easting'] - gps_data['UTM_easting'][0]
 gps_data['UTM_northing'] = gps_data['UTM_northing'] - gps_data['UTM_northing'][0]
 samples_gps = len(gps_time)
 
-acc_x = imu_data['IMU.linear_acceleration.x'] - imu_data['IMU.linear_acceleration.x'].mean()
-vel_imu_bf = np.cumsum(acc_x*1/freq_imu)
+accel_x = imu_data['IMU.linear_accel.x'] - imu_data['IMU.linear_accel.x'].mean()
+vel_imu_bf = np.cumsum(accel_x*1/freq_imu)
 
 # Accelerometer correction
-acc_x, stationary_periods = correct_acceleration(imu_data['IMU.linear_acceleration.x'])
+accel_x, stationary_periods = correct_accel(imu_data['IMU.linear_accel.x'])
 stat_values= np.zeros(len(stationary_periods))
 
 imu_data['IMU.pitch']=butterworth_filter(imu_data['IMU.pitch'],freq_imu,0.1,'low')
 imu_data['IMU.roll']=butterworth_filter(imu_data['IMU.roll'],freq_imu,0.1,'low')
-correction = correct_for_pitch(acc_x,205,260)
-acc_x[300*freq_imu:410*freq_imu] += 3.2*correction
-acc_x[405*freq_imu:495*freq_imu] -= 0.58*(1*(50)**2+3*(100)**2)/(75**2)*correction
+correction = pitch_correction(accel_x,205,260)
+accel_x[300*freq_imu:410*freq_imu] += 3.2*correction
+accel_x[405*freq_imu:495*freq_imu] -= 0.58*(1*(50)**2+3*(100)**2)/(75**2)*correction
 
-vel_imu = np.cumsum(acc_x*1/freq_imu)
+vel_imu = np.cumsum(accel_x*1/freq_imu)
 vel_imu[440*freq_imu:495*freq_imu] = 0
 
 fig, axs = plt.subplots(1, 2, figsize=(15,10), sharex=True)
@@ -352,7 +351,7 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-vel_gps,disp_gps, vel_gps2 = gps_vel_and_disp(gps_data)
+vel_gps,disp_gps, vel_gps2 = gps_velocity_displacement(gps_data)
 
 plt.plot(np.array(gps_time), np.array(vel_gps), color='pink')
 plt.title('GPS Forward velocity')
@@ -412,12 +411,12 @@ Q6 = np.zeros(len(vel_imu))
 for i in range(len(vel_imu)):
 	Q6[i] = imu_data['IMU.angular_velocity.z'][i]*vel_imu[i]
 
-acc_y, stationary_periods2 = correct_acceleration(imu_data['IMU.linear_acceleration.y'])
-acc_y = butterworth_filter(acc_y,freq_imu,1,'low')
+accel_y, stationary_periods2 = correct_accel(imu_data['IMU.linear_accel.y'])
+accel_y = butterworth_filter(accel_y,freq_imu,1,'low')
 stat_values = np.zeros(len(stationary_periods2))
 plt.plot(imu_time, Q6, color='pink')
-plt.plot(imu_time, acc_y, color='grey')
+plt.plot(imu_time, accel_y, color='grey')
 plt.legend(['wX`','Y``observed'])
 plt.xlabel('Time (sec)')
-plt.ylabel('Acceleration (m/sec^2)')
+plt.ylabel('accel (m/sec^2)')
 plt.show()
