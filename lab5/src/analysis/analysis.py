@@ -62,10 +62,10 @@ def frame_correction(data_x,data_y, theta):
 	out_data_y = -1*math.sin(theta)*data_x + math.cos(theta)*data_y
 	return out_data_x, out_data_y
 
-def butterworth_filter(data, fs, cutoff, type):
-    nyq = 0.5*fs
+def butterworth_filter(data, sampling_freq, cutoff, type):
+    nyquist = 0.5*sampling_freq
     order = 2 
-    normal_cutoff = cutoff / nyq
+    normal_cutoff = cutoff / nyquist
     # Get the filter coefficients 
     sos = signal.butter(order, normal_cutoff, btype=type, output='sos', analog=False)
     y = signal.sosfilt(sos, data)
