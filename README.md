@@ -1,6 +1,6 @@
 # EECE5554 Robotics Sensing and Navigation
 
-This repository contains homework assignments and project files for the EECE 5554 Robotics Sensing and Navigation course at Northeastern University.
+This repository contains homework assignments and project files for the EECE 5554 Robotics Sensing and Navigation course at Northeastern University by Profeesor Thomas Consi.
 
 ## Contents
 
