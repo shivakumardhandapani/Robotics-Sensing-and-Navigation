@@ -5,7 +5,7 @@ This repository contains homework assignments and project files for the EECE 555
 ## Contents
 
 - Lab and assignments covering various topics in robotics sensing and navigation
-- Project report on the implementation and analysis of LiDAR-Inertial Odometry Simultaneous Localization and Mapping (LIO-SLAM) with Iterative Extended Kalman Filter (IEKF) and Scan Context (SC)
+- Project on the implementation and analysis of LiDAR-Inertial Odometry Simultaneous Localization and Mapping (LIO-SLAM) with Iterative Extended Kalman Filter (IEKF) and Scan Context (SC)
 
 ## Key Topics Covered
 
