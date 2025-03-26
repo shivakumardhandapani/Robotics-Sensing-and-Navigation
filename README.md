@@ -32,6 +32,8 @@ The final project focused on implementing and analyzing a LIO-SLAM system with t
 - Analysis of system accuracy and robustness in different environments
 - Non-linear optimization like LM, iSAM, gtsam
 
+Refer the project report for detailed information 
+
 ## Tools and Technologies Used
 
 - ROS (Robot Operating System)
